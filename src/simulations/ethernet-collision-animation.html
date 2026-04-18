@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ethernet Collision Animation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-surface-offset: #efece6;
+      --color-border: #d4d1ca;
+      --color-divider: #dcd9d5;
+      --color-text: #28251d;
+      --color-text-muted: #6f6b65;
+      --color-text-faint: #9a958e;
+      --color-text-inverse: #f9f8f4;
+      --color-primary: #01696f;
+      --color-primary-hover: #0c4e54;
+      --color-primary-highlight: #cedcd8;
+      --color-track: #d9e4e7;
+      --color-signal: #0b7c86;
+      --color-jam: #c45816;
+      --color-collision: #a12c7b;
+      --color-success: #437a22;
+
+      --radius-sm: 0.375rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      --radius-full: 9999px;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 8px 22px rgba(0,0,0,0.08);
+      --shadow-lg: 0 18px 44px rgba(0,0,0,0.12);
+      --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #201f1d;
+      --color-surface-offset: #242321;
+      --color-border: #393836;
+      --color-divider: #2a2927;
+      --color-text: #ece9e3;
+      --color-text-muted: #a7a29c;
+      --color-text-faint: #7a746e;
+      --color-text-inverse: #171614;
+      --color-primary: #4f98a3;
+      --color-primary-hover: #62aab4;
+      --color-primary-highlight: #2a3a3d;
+      --color-track: #24343a;
+      --color-signal: #62c7d1;
+      --color-jam: #ff9f54;
+      --color-collision: #df7bc4;
+      --color-success: #79b95c;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 8px 22px rgba(0,0,0,0.3);
+      --shadow-lg: 0 18px 44px rgba(0,0,0,0.4);
+    }
+
+    * , *::before, *::after { box-sizing: border-box; }
+    html {
+      color-scheme: light dark;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.6;
+      color: var(--color-text);
+      background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 32%),
+        linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 78%, black 22%));
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    :focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 3px;
+      border-radius: var(--radius-sm);
+    }
+
+    .shell {
+      width: min(1100px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: var(--space-6) 0 var(--space-12);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-8);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .brand svg {
+      width: 2rem;
+      height: 2rem;
+      color: var(--color-primary);
+    }
+
+    .theme-toggle {
+      inline-size: 2.75rem;
+      block-size: 2.75rem;
+      border-radius: var(--radius-full);
+      border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+      background: var(--color-surface);
+      color: var(--color-text);
+      display: grid;
+      place-items: center;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition), background var(--transition), border-color var(--transition);
+    }
+    .theme-toggle:hover { transform: translateY(-1px); background: var(--color-surface-2); }
+
+    .hero {
+      display: grid;
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.45rem 0.8rem;
+      width: fit-content;
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+      color: var(--color-primary);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      line-height: 0.96;
+      letter-spacing: -0.03em;
+      max-width: 13ch;
+    }
+
+    .lede {
+      margin: 0;
+      max-width: 65ch;
+      color: var(--color-text-muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr 0.95fr;
+      gap: var(--space-6);
+      align-items: start;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--color-surface), var(--color-surface-2));
+      border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+    }
+
+    .sim-card {
+      padding: var(--space-6);
+      overflow: hidden;
+    }
+
+    .network {
+      position: relative;
+      min-height: 420px;
+      border-radius: calc(var(--radius-xl) - 0.25rem);
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 80%, transparent), color-mix(in srgb, var(--color-surface-offset) 86%, transparent)),
+        radial-gradient(circle at center, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 55%);
+      border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+      padding: var(--space-8) var(--space-4);
+      isolation: isolate;
+    }
+
+    .bus {
+      position: absolute;
+      inset-inline: 11%;
+      top: 50%;
+      height: 0.7rem;
+      transform: translateY(-50%);
+      border-radius: var(--radius-full);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--color-track) 75%, white 25%), var(--color-track), color-mix(in srgb, var(--color-track) 75%, black 25%));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
+    }
+
+    .bus::before, .bus::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+      background: var(--color-surface-offset);
+      border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+      transform: translateY(-50%);
+    }
+    .bus::before { left: -0.5rem; }
+    .bus::after { right: -0.5rem; }
+
+    .device {
+      --device-color: var(--color-primary);
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: clamp(5.2rem, 7vw, 6.2rem);
+      aspect-ratio: 1;
+      border-radius: 1.1rem;
+      border: 1px solid color-mix(in srgb, var(--device-color) 40%, transparent);
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--device-color) 18%, var(--color-surface-2)), color-mix(in srgb, var(--device-color) 8%, var(--color-surface)));
+      color: var(--color-text);
+      display: grid;
+      place-items: center;
+      gap: 0.15rem;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition), background var(--transition);
+      z-index: 2;
+    }
+    .device:hover { transform: translate(-50%, calc(-50% - 2px)); box-shadow: var(--shadow-md); }
+    .device.active {
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--device-color) 22%, transparent), var(--shadow-md);
+      border-color: color-mix(in srgb, var(--device-color) 70%, white 10%);
+    }
+    .device.colliding {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--color-collision) 30%, var(--color-surface-2)), color-mix(in srgb, var(--color-collision) 18%, var(--color-surface)));
+      border-color: color-mix(in srgb, var(--color-collision) 75%, white 8%);
+      animation: shake 500ms ease-in-out 2;
+    }
+    .device.waiting {
+      opacity: 0.9;
+      filter: saturate(0.78);
+    }
+
+    .device strong { font-size: var(--text-lg); line-height: 1; }
+    .device span { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+    .device[data-id="A"] { left: 14%; --device-color: #55a95a; }
+    .device[data-id="B"] { left: 50%; --device-color: #4f98d8; }
+    .device[data-id="C"] { left: 86%; --device-color: #d98a24; }
+
+    .signal-layer, .effect-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .pulse {
+      position: absolute;
+      top: 50%;
+      height: 1rem;
+      border-radius: var(--radius-full);
+      transform: translateY(-50%);
+      opacity: 0.95;
+      filter: drop-shadow(0 0 8px color-mix(in srgb, var(--pulse-color, var(--color-signal)) 45%, transparent));
+      animation-fill-mode: forwards;
+    }
+    .pulse.signal {
+      background: linear-gradient(90deg, transparent, var(--pulse-color), transparent);
+      animation: travel 1200ms linear forwards;
+    }
+    .pulse.jam {
+      background: linear-gradient(90deg, transparent, var(--pulse-color), transparent);
+      height: 1.2rem;
+      animation: jam-expand 900ms ease-out forwards;
+    }
+    .burst {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--color-collision) 45%, white 10%);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-collision) 40%, transparent);
+      animation: burst 850ms ease-out forwards;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+    }
+
+    .btn {
+      min-height: 2.9rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-full);
+      border: 1px solid transparent;
+      transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn.primary {
+      background: var(--color-primary);
+      color: var(--color-text-inverse);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn.primary:hover { background: var(--color-primary-hover); }
+    .btn.secondary {
+      background: var(--color-surface-offset);
+      color: var(--color-text);
+      border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
+    }
+
+    .legend {
+      margin-top: var(--space-5);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      justify-content: center;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.55rem 0.8rem;
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    }
+    .swatch {
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      background: var(--swatch);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 10%, transparent);
+    }
+
+    .side {
+      display: grid;
+      gap: var(--space-6);
+    }
+
+    .status-card, .notes-card {
+      padding: var(--space-6);
+    }
+
+    .status-grid {
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: var(--space-5);
+    }
+
+    .metric {
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--color-text) 4%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+      text-align: left;
+    }
+    .metric-label {
+      display: block;
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.35rem;
+    }
+    .metric-value {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-title, .notes-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    h2 {
+      margin: 0;
+      font-size: var(--text-lg);
+      line-height: 1.15;
+    }
+
+    .timeline {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      display: grid;
+      gap: var(--space-3);
+    }
+    .timeline li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-3);
+      align-items: start;
+      text-align: left;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .timeline-dot {
+      width: 0.8rem;
+      height: 0.8rem;
+      border-radius: 50%;
+      margin-top: 0.35rem;
+      background: color-mix(in srgb, var(--color-primary) 75%, white 5%);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 16%, transparent);
+    }
+
+    .notes-card p, .notes-card li {
+      color: var(--color-text-muted);
+      text-align: left;
+      margin: 0;
+    }
+    .notes-card ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      display: grid;
+      gap: var(--space-3);
+    }
+    .notes-card strong { color: var(--color-text); }
+
+    .footer-note {
+      margin-top: var(--space-6);
+      color: var(--color-text-faint);
+      font-size: var(--text-sm);
+      text-align: center;
+    }
+
+    @keyframes travel {
+      from { width: 0; opacity: 0.7; }
+      20% { opacity: 1; }
+      to { width: var(--travel-distance); opacity: 0.9; }
+    }
+    @keyframes jam-expand {
+      from { left: var(--center-x); width: 0; opacity: 1; }
+      to { left: 12%; width: 76%; opacity: 0; }
+    }
+    @keyframes burst {
+      0% { transform: translate(-50%, -50%) scale(0.25); opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-collision) 50%, transparent); }
+      100% { transform: translate(-50%, -50%) scale(6.5); opacity: 0; box-shadow: 0 0 0 34px transparent; }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translate(-50%, -50%); }
+      20% { transform: translate(calc(-50% - 2px), calc(-50% - 1px)); }
+      40% { transform: translate(calc(-50% + 3px), calc(-50% + 1px)); }
+      60% { transform: translate(calc(-50% - 3px), calc(-50% + 1px)); }
+      80% { transform: translate(calc(-50% + 2px), calc(-50% - 1px)); }
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      h1 { max-width: 18ch; }
+      .network { min-height: 400px; }
+      .device[data-id="A"] { left: 16%; }
+      .device[data-id="C"] { left: 84%; }
+    }
+
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 1rem, 1100px); padding-top: var(--space-4); }
+      .topbar { margin-bottom: var(--space-6); }
+      .sim-card, .status-card, .notes-card { padding: var(--space-4); }
+      .network { min-height: 360px; padding-inline: var(--space-2); }
+      .device { width: 4.7rem; border-radius: 0.95rem; }
+      .device strong { font-size: 1.15rem; }
+      .status-grid { grid-template-columns: 1fr; }
+      .controls { justify-content: stretch; }
+      .controls .btn { flex: 1 1 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Ethernet CSMA/CD demo brand">
+        <svg viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="8" y="18" width="14" height="28" rx="4"></rect>
+          <rect x="42" y="18" width="14" height="28" rx="4"></rect>
+          <path d="M22 32h20"></path>
+          <circle cx="32" cy="32" r="5"></circle>
+        </svg>
+        <span>Ethernet CSMA/CD</span>
+      </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch theme"></button>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">Shared medium simulation</div>
+      <h1>Watch an Ethernet collision happen, then resolve itself.</h1>
+      <p class="lede">Click one station to send a frame, or click two quickly to trigger a collision. The demo shows carrier sense, collision detection, a jam signal, and randomized backoff in a cleaner, more instructive format.</p>
+    </section>
+
+    <main class="layout">
+      <section class="card sim-card" aria-labelledby="sim-title">
+        <div class="network" id="network" role="img" aria-label="Shared Ethernet bus with three devices connected to one cable">
+          <div class="bus"></div>
+          <div class="signal-layer" id="signals"></div>
+          <div class="effect-layer" id="effects"></div>
+
+          <button class="device" data-id="A" id="A" type="button" aria-label="Transmit from device A">
+            <strong>A</strong><span>Host</span>
+          </button>
+          <button class="device" data-id="B" id="B" type="button" aria-label="Transmit from device B">
+            <strong>B</strong><span>Host</span>
+          </button>
+          <button class="device" data-id="C" id="C" type="button" aria-label="Transmit from device C">
+            <strong>C</strong><span>Host</span>
+          </button>
+        </div>
+
+        <div class="controls" aria-label="Simulation controls">
+          <button class="btn primary" id="demoBtn" type="button">Run collision demo</button>
+          <button class="btn secondary" id="resetBtn" type="button">Reset animation</button>
+        </div>
+
+        <div class="legend" aria-label="Legend">
+          <div class="legend-item"><span class="swatch" style="--swatch: var(--color-signal);"></span>Normal frame</div>
+          <div class="legend-item"><span class="swatch" style="--swatch: var(--color-collision);"></span>Collision point</div>
+          <div class="legend-item"><span class="swatch" style="--swatch: var(--color-jam);"></span>Jam signal</div>
+          <div class="legend-item"><span class="swatch" style="--swatch: var(--color-success);"></span>Successful retry</div>
+        </div>
+
+        <p class="footer-note">Tip: click A and C back-to-back for the clearest collision.</p>
+      </section>
+
+      <aside class="side">
+        <section class="card status-card" aria-labelledby="sim-title">
+          <div class="status-title">
+            <h2 id="sim-title">Live status</h2>
+            <span id="busState" class="eyebrow" style="padding-block:0.3rem;">Idle</span>
+          </div>
+
+          <div class="status-grid">
+            <div class="metric">
+              <span class="metric-label">Attempts</span>
+              <span class="metric-value" id="attemptsValue">0</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Collisions</span>
+              <span class="metric-value" id="collisionsValue">0</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Last backoff</span>
+              <span class="metric-value" id="backoffValue">0 slots</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Last sender</span>
+              <span class="metric-value" id="senderValue">—</span>
+            </div>
+          </div>
+
+          <ol class="timeline" id="timeline" aria-live="polite"></ol>
+        </section>
+
+        <section class="card notes-card" aria-labelledby="notes-title">
+          <div class="notes-title">
+            <h2 id="notes-title">What you are seeing</h2>
+          </div>
+          <ul>
+            <li><strong>Carrier sense:</strong> a host checks whether the cable looks busy before sending.</li>
+            <li><strong>Collision detection:</strong> overlapping transmissions reveal that two hosts started too close together in time.</li>
+            <li><strong>Jam signal:</strong> both hosts broadcast a short warning so every device knows the frame was corrupted.</li>
+            <li><strong>Binary exponential backoff:</strong> each sender waits a random number of slot times before retrying, lowering the chance of repeating the same collision.</li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const themeToggle = document.querySelector('[data-theme-toggle]');
+    let manualTheme = null;
+
+    function applyTheme(mode) {
+      root.setAttribute('data-theme', mode);
+      if (themeToggle) {
+        themeToggle.setAttribute('aria-label', `Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`);
+        themeToggle.innerHTML = mode === 'dark'
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+      }
+    }
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    applyTheme(media.matches ? 'dark' : 'light');
+    media.addEventListener('change', (event) => {
+      if (!manualTheme) applyTheme(event.matches ? 'dark' : 'light');
+    });
+    themeToggle?.addEventListener('click', () => {
+      manualTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(manualTheme);
+    });
+
+    const devices = [...document.querySelectorAll('.device')];
+    const signals = document.getElementById('signals');
+    const effects = document.getElementById('effects');
+    const attemptsValue = document.getElementById('attemptsValue');
+    const collisionsValue = document.getElementById('collisionsValue');
+    const backoffValue = document.getElementById('backoffValue');
+    const senderValue = document.getElementById('senderValue');
+    const busState = document.getElementById('busState');
+    const timeline = document.getElementById('timeline');
+    const network = document.getElementById('network');
+    const demoBtn = document.getElementById('demoBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const positions = { A: 14, B: 50, C: 86 };
+    const state = {
+      queue: [],
+      busy: false,
+      attempts: 0,
+      collisions: 0,
+      lastBackoff: 0,
+      lastSender: '—',
+      timers: []
+    };
+
+    function schedule(fn, delay) {
+      const timer = window.setTimeout(fn, delay);
+      state.timers.push(timer);
+      return timer;
+    }
+
+    function clearTimers() {
+      state.timers.forEach(clearTimeout);
+      state.timers = [];
+    }
+
+    function updateMetrics() {
+      attemptsValue.textContent = String(state.attempts);
+      collisionsValue.textContent = String(state.collisions);
+      backoffValue.textContent = `${state.lastBackoff} slot${state.lastBackoff === 1 ? '' : 's'}`;
+      senderValue.textContent = state.lastSender;
+    }
+
+    function setBusState(label, tone = 'var(--color-primary)') {
+      busState.textContent = label;
+      busState.style.color = tone;
+      busState.style.background = `color-mix(in srgb, ${tone} 12%, var(--color-surface))`;
+    }
+
+    function addTimeline(message) {
+      const item = document.createElement('li');
+      item.innerHTML = '<span class="timeline-dot"></span><span></span>';
+      item.querySelector('span:last-child').textContent = message;
+      timeline.prepend(item);
+      while (timeline.children.length > 6) timeline.removeChild(timeline.lastChild);
+    }
+
+    function deviceEl(id) { return document.getElementById(id); }
+
+    function markDevice(id, className, enabled) {
+      deviceEl(id)?.classList.toggle(className, enabled);
+    }
+
+    function clearVisuals() {
+      signals.innerHTML = '';
+      effects.innerHTML = '';
+      devices.forEach((el) => el.classList.remove('active', 'colliding', 'waiting'));
+    }
+
+    function createPulse(type, fromPercent, toPercent, color) {
+      const pulse = document.createElement('div');
+      pulse.className = `pulse ${type}`;
+      const start = Math.min(fromPercent, toPercent);
+      const distance = Math.abs(toPercent - fromPercent);
+      pulse.style.left = `${start}%`;
+      pulse.style.width = '0';
+      pulse.style.setProperty('--travel-distance', `${distance}%`);
+      pulse.style.setProperty('--pulse-color', color);
+      signals.appendChild(pulse);
+      pulse.addEventListener('animationend', () => pulse.remove(), { once: true });
+      return pulse;
+    }
+
+    function createJam(centerPercent) {
+      const jam = document.createElement('div');
+      jam.className = 'pulse jam';
+      jam.style.setProperty('--center-x', `${centerPercent}%`);
+      jam.style.setProperty('--pulse-color', 'var(--color-jam)');
+      signals.appendChild(jam);
+      jam.addEventListener('animationend', () => jam.remove(), { once: true });
+    }
+
+    function createBurst() {
+      const burst = document.createElement('div');
+      burst.className = 'burst';
+      effects.appendChild(burst);
+      burst.addEventListener('animationend', () => burst.remove(), { once: true });
+    }
+
+    function idleIfDone() {
+      if (!state.busy && state.queue.length === 0) setBusState('Idle');
+    }
+
+    function finishCycle() {
+      state.busy = false;
+      devices.forEach((el) => el.classList.remove('active', 'colliding'));
+      state.queue = [];
+      idleIfDone();
+      updateMetrics();
+    }
+
+    function success(id) {
+      state.lastSender = id;
+      updateMetrics();
+      setBusState(`Success: ${id}`, 'var(--color-success)');
+      addTimeline(`Host ${id} transmitted successfully after sensing an idle line.`);
+      markDevice(id, 'active', true);
+      createPulse('signal', positions[id], id === 'A' ? 86 : 14, 'var(--color-success)');
+      schedule(() => {
+        markDevice(id, 'active', false);
+        finishCycle();
+      }, 1250);
+    }
+
+    function handleCollision(first, second) {
+      state.collisions += 1;
+      state.attempts += 2;
+      setBusState('Collision detected', 'var(--color-collision)');
+      markDevice(first, 'active', true);
+      markDevice(second, 'active', true);
+      markDevice(first, 'colliding', true);
+      markDevice(second, 'colliding', true);
+      createPulse('signal', positions[first], 50, 'var(--color-signal)');
+      createPulse('signal', positions[second], 50, 'var(--color-signal)');
+      schedule(createBurst, 520);
+      schedule(() => createJam(50), 580);
+
+      const slots = Math.floor(Math.random() * 4) + 1;
+      const retryHost = Math.random() > 0.5 ? first : second;
+      state.lastBackoff = slots;
+      state.lastSender = `${first}, ${second}`;
+      updateMetrics();
+      addTimeline(`Hosts ${first} and ${second} collided, sent a jam signal, then picked random backoff waits.`);
+
+      schedule(() => {
+        markDevice(first, 'waiting', true);
+        markDevice(second, 'waiting', true);
+        setBusState(`Backoff: ${slots} slots`, 'var(--color-jam)');
+      }, 900);
+
+      schedule(() => {
+        devices.forEach((el) => el.classList.remove('colliding', 'active', 'waiting'));
+        state.queue = [retryHost];
+        addTimeline(`Host ${retryHost} won the retry and transmits after waiting ${slots} slot${slots === 1 ? '' : 's'}.`);
+        success(retryHost);
+      }, 1450 + slots * 220);
+    }
+
+    function processQueue() {
+      if (state.busy || state.queue.length === 0) return;
+      state.busy = true;
+      const contenders = [...new Set(state.queue)].slice(0, 2);
+      state.queue = [];
+
+      if (contenders.length === 1) {
+        const [id] = contenders;
+        state.attempts += 1;
+        setBusState(`Transmitting: ${id}`, 'var(--color-signal)');
+        updateMetrics();
+        addTimeline(`Host ${id} senses an idle cable and starts transmitting.`);
+        markDevice(id, 'active', true);
+        createPulse('signal', positions[id], id === 'A' ? 86 : 14, 'var(--color-signal)');
+        schedule(() => success(id), 1050);
+      } else {
+        handleCollision(contenders[0], contenders[1]);
+      }
+    }
+
+    function send(id) {
+      if (!state.queue.includes(id) && !state.busy) state.queue.push(id);
+      else if (state.busy && !state.queue.includes(id) && state.queue.length === 0) state.queue.push(id);
+      else if (!state.queue.includes(id) && state.queue.length < 2) state.queue.push(id);
+      processQueue();
+    }
+
+    devices.forEach((button) => {
+      button.addEventListener('click', () => {
+        if (state.busy && state.queue.length >= 2) return;
+        if (state.busy && state.queue.length === 0) {
+          addTimeline(`Host ${button.dataset.id} waits because the medium is busy.`);
+          return;
+        }
+        state.queue.push(button.dataset.id);
+        state.queue = [...new Set(state.queue)].slice(0, 2);
+        processQueue();
+      });
+    });
+
+    demoBtn.addEventListener('click', () => {
+      resetSimulation(false);
+      addTimeline('Automatic demo started: A and C will transmit together.');
+      state.queue = ['A', 'C'];
+      processQueue();
+    });
+
+    function resetSimulation(log = true) {
+      clearTimers();
+      state.queue = [];
+      state.busy = false;
+      state.attempts = 0;
+      state.collisions = 0;
+      state.lastBackoff = 0;
+      state.lastSender = '—';
+      clearVisuals();
+      updateMetrics();
+      setBusState('Idle');
+      timeline.innerHTML = '';
+      if (log) addTimeline('Simulation reset. The cable is idle again.');
+    }
+
+    resetBtn.addEventListener('click', () => resetSimulation(true));
+
+    updateMetrics();
+    setBusState('Idle');
+    addTimeline('Ready. Click one host to send, or click two quickly to create a collision.');
+  </script>
+</body>
+</html>
