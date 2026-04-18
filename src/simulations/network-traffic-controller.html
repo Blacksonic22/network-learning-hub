@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Network Traffic Controller</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=cabinet-grotesk@500,700,800&display=swap" rel="stylesheet" />
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+      --radius-sm: 0.375rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      --radius-full: 9999px;
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-surface-offset: #edeae5;
+      --color-border: #d4d1ca;
+      --color-divider: #dcd9d5;
+      --color-text: #28251d;
+      --color-text-muted: #6d6a64;
+      --color-text-faint: #9c9890;
+      --color-text-inverse: #f9f8f4;
+      --color-primary: #01696f;
+      --color-primary-hover: #0c4e54;
+      --color-primary-highlight: #cedcd8;
+      --color-success: #437a22;
+      --color-warning: #d19900;
+      --color-error: #a12c7b;
+      --shadow-sm: 0 1px 2px oklch(0.2 0.01 80 / 0.06);
+      --shadow-md: 0 8px 24px oklch(0.2 0.01 80 / 0.1);
+      --shadow-lg: 0 24px 48px oklch(0.2 0.01 80 / 0.16);
+      --transition-interactive: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-display: 'Cabinet Grotesk', 'Inter', sans-serif;
+      --font-body: 'General Sans', 'Inter', sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #201f1d;
+      --color-surface-offset: #242320;
+      --color-border: #393836;
+      --color-divider: #262523;
+      --color-text: #e2e0db;
+      --color-text-muted: #a39f96;
+      --color-text-faint: #716d66;
+      --color-text-inverse: #1f1d1a;
+      --color-primary: #4f98a3;
+      --color-primary-hover: #6ab0ba;
+      --color-primary-highlight: #313b3b;
+      --color-success: #83bf58;
+      --color-warning: #e8af34;
+      --color-error: #dd6974;
+      --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.2);
+      --shadow-md: 0 8px 24px oklch(0 0 0 / 0.35);
+      --shadow-lg: 0 24px 48px oklch(0 0 0 / 0.5);
+    }
+
+    * , *::before, *::after { box-sizing: border-box; }
+    html {
+      color-scheme: light dark;
+      -webkit-text-size-adjust: none;
+      text-size-adjust: none;
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.6;
+      color: var(--color-text);
+      background:
+        radial-gradient(circle at top, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent 36%),
+        linear-gradient(180deg, var(--color-surface-2), var(--color-bg) 42%, var(--color-bg));
+    }
+    button {
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+    :focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 3px;
+      border-radius: var(--radius-sm);
+    }
+
+    .shell {
+      width: min(1100px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: var(--space-6) 0 var(--space-12);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-8);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .brand svg {
+      width: 2.5rem;
+      height: 2.5rem;
+      color: var(--color-primary);
+    }
+
+    .theme-toggle {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: var(--radius-full);
+      border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+      background: color-mix(in oklab, var(--color-surface) 86%, transparent);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero {
+      display: grid;
+      gap: var(--space-8);
+      align-items: start;
+      grid-template-columns: 1.15fr 0.85fr;
+      margin-bottom: var(--space-8);
+    }
+
+    .panel {
+      background: color-mix(in oklab, var(--color-surface) 90%, transparent);
+      border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-copy {
+      padding: clamp(var(--space-6), 4vw, var(--space-10));
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      margin-bottom: var(--space-4);
+      border-radius: var(--radius-full);
+      background: color-mix(in oklab, var(--color-primary) 14%, var(--color-surface));
+      color: var(--color-primary);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 var(--space-4);
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      line-height: 0.98;
+      letter-spacing: -0.03em;
+      max-width: 12ch;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--color-text-muted);
+      max-width: 58ch;
+    }
+
+    .stats {
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: var(--space-6);
+    }
+
+    .stat {
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: color-mix(in oklab, var(--color-surface-offset) 82%, transparent);
+      border: 1px solid color-mix(in oklab, var(--color-text) 8%, transparent);
+    }
+
+    .stat-label {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: var(--space-2);
+    }
+
+    .stat-value {
+      font-size: var(--text-xl);
+      font-variant-numeric: tabular-nums lining-nums;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .legend {
+      padding: clamp(var(--space-5), 3vw, var(--space-8));
+      display: grid;
+      gap: var(--space-4);
+      align-content: start;
+    }
+
+    .legend h2 {
+      margin: 0;
+      font-size: var(--text-lg);
+      font-family: var(--font-display);
+    }
+
+    .legend p {
+      margin: 0;
+      color: var(--color-text-muted);
+    }
+
+    .legend-list {
+      display: grid;
+      gap: var(--space-3);
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .legend-list li {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      color: var(--color-text-muted);
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: var(--radius-full);
+      flex: 0 0 14px;
+      box-shadow: inset 0 0 0 1px color-mix(in oklab, black 20%, transparent);
+    }
+
+    .game-wrap {
+      padding: clamp(var(--space-4), 3vw, var(--space-6));
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+
+    .hud-card {
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: color-mix(in oklab, var(--color-surface-offset) 85%, transparent);
+      border: 1px solid color-mix(in oklab, var(--color-text) 8%, transparent);
+    }
+
+    .hud-card strong {
+      display: block;
+      font-size: var(--text-xl);
+      line-height: 1;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    .hud-card span {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .network {
+      position: relative;
+      min-height: 420px;
+      overflow: hidden;
+      border-radius: calc(var(--radius-xl) + 0.35rem);
+      border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+      background:
+        linear-gradient(180deg, color-mix(in oklab, var(--color-surface-2) 95%, transparent), color-mix(in oklab, var(--color-surface-offset) 88%, transparent)),
+        repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in oklab, var(--color-primary) 5%, transparent) 79px 80px),
+        repeating-linear-gradient(0deg, transparent 0 79px, color-mix(in oklab, var(--color-primary) 4%, transparent) 79px 80px);
+      box-shadow: inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+    }
+
+    .network::before,
+    .network::after {
+      content: "";
+      position: absolute;
+      inset-inline: 10%;
+      height: 4px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(90deg, color-mix(in oklab, var(--color-primary) 22%, transparent), color-mix(in oklab, var(--color-primary) 65%, transparent), color-mix(in oklab, var(--color-primary) 22%, transparent));
+      box-shadow: 0 0 24px color-mix(in oklab, var(--color-primary) 35%, transparent);
+    }
+
+    .network::before { top: 33%; }
+    .network::after { top: 66%; }
+
+    .lane-label {
+      position: absolute;
+      left: var(--space-4);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-faint);
+    }
+
+    .lane-top { top: calc(33% - 1.4rem); }
+    .lane-bottom { top: calc(66% - 1.4rem); }
+
+    .device {
+      position: absolute;
+      width: min(18vw, 110px);
+      aspect-ratio: 1;
+      border-radius: 1.4rem;
+      display: grid;
+      place-items: center;
+      padding: var(--space-3);
+      border: 1px solid color-mix(in oklab, var(--color-text) 12%, transparent);
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      transition:
+        transform var(--transition-interactive),
+        box-shadow var(--transition-interactive),
+        border-color var(--transition-interactive),
+        background var(--transition-interactive);
+      user-select: none;
+      isolation: isolate;
+    }
+
+    .device::before {
+      content: "";
+      position: absolute;
+      inset: 9px;
+      border-radius: 1rem;
+      background: color-mix(in oklab, white 16%, transparent);
+      z-index: -1;
+      opacity: 0.55;
+    }
+
+    .device:hover,
+    .device:focus-visible {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .device-letter {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 2vw + 1rem, 2.8rem);
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .device-role {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .device.a { left: 8%; top: 18%; background: linear-gradient(180deg, #49b26c, #2e7e4a); color: #f5fff6; }
+    .device.b { left: 41%; top: 50%; transform: translateY(-50%); background: linear-gradient(180deg, #3d94de, #2267b8); color: #f4fbff; }
+    .device.c { right: 8%; bottom: 14%; background: linear-gradient(180deg, #f0a63c, #da7101); color: #fff9f0; }
+
+    .device.active {
+      box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 30%, transparent), 0 0 30px color-mix(in oklab, white 16%, transparent), var(--shadow-lg);
+      animation: pulse 0.8s ease-in-out infinite alternate;
+    }
+
+    .device.collision {
+      background: linear-gradient(180deg, #e66f79, #a13544) !important;
+      color: #fff5f6;
+      animation: shake 0.35s ease-in-out 2;
+    }
+
+    .packet {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: var(--radius-full);
+      background: radial-gradient(circle at 30% 30%, #ffffff, color-mix(in oklab, var(--color-primary) 70%, white));
+      box-shadow: 0 0 20px color-mix(in oklab, var(--color-primary) 60%, transparent);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .packet.animate {
+      animation: travel 780ms linear forwards;
+    }
+
+    .statusbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-top: var(--space-5);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-full);
+      background: color-mix(in oklab, var(--color-surface-offset) 92%, transparent);
+      border: 1px solid color-mix(in oklab, var(--color-text) 8%, transparent);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-full);
+      background: var(--color-success);
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-success) 18%, transparent);
+    }
+
+    .status-pill.warn .dot { background: var(--color-warning); box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-warning) 18%, transparent); }
+    .status-pill.error .dot { background: var(--color-error); box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-error) 18%, transparent); }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 0.8rem 1.1rem;
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: var(--color-text-inverse);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover { background: var(--color-primary-hover); }
+
+    .btn-secondary {
+      background: color-mix(in oklab, var(--color-surface-offset) 92%, transparent);
+      border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+    }
+
+    .footer-note {
+      margin-top: var(--space-6);
+      color: var(--color-text-faint);
+      font-size: var(--text-sm);
+    }
+
+    @keyframes pulse {
+      from { box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary) 24%, transparent), 0 0 16px color-mix(in oklab, white 8%, transparent), var(--shadow-lg); }
+      to { box-shadow: 0 0 0 7px color-mix(in oklab, var(--color-primary) 18%, transparent), 0 0 28px color-mix(in oklab, white 16%, transparent), var(--shadow-lg); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      25% { transform: translateY(0) translateX(-4px); }
+      75% { transform: translateY(0) translateX(4px); }
+    }
+
+    @keyframes travel {
+      0% { opacity: 0; transform: translateX(0) scale(0.75); }
+      12% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(calc(var(--travel-distance) * 1px)) scale(1.15); }
+    }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 680px) {
+      .shell { width: min(100% - 1rem, 1100px); padding-top: var(--space-4); }
+      .topbar { margin-bottom: var(--space-5); }
+      .stats { grid-template-columns: 1fr; }
+      .hud { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+      .network { min-height: 500px; }
+      .device { width: 92px; }
+      .device.a { left: 9%; top: 15%; }
+      .device.b { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+      .device.c { right: 9%; bottom: 12%; }
+      .statusbar { align-items: stretch; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Network Traffic Controller">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="6" y="10" width="16" height="16" rx="5" stroke="currentColor" stroke-width="3"/>
+          <rect x="42" y="10" width="16" height="16" rx="5" stroke="currentColor" stroke-width="3"/>
+          <rect x="24" y="38" width="16" height="16" rx="5" stroke="currentColor" stroke-width="3"/>
+          <path d="M22 18H42M32 26V38" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+        </svg>
+        <span>Network Traffic Controller</span>
+      </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch theme"></button>
+    </header>
+
+    <section class="hero">
+      <div class="panel hero-copy">
+        <div class="eyebrow">Interactive CS mini-game</div>
+        <h1>Send one packet at a time. Prevent collisions.</h1>
+        <p class="lede">Tap a device to transmit traffic across the shared network. Single, well-timed sends earn points. Overlapping sends trigger a collision and push the network into an error state.</p>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Goal</span>
+            <strong class="stat-value">Control</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Skill</span>
+            <strong class="stat-value">Timing</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Concept</span>
+            <strong class="stat-value">Collision</strong>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel legend">
+        <h2>How to play</h2>
+        <p>Use the three endpoints like stations on a shared channel. Only one sender should be active during a transmission window.</p>
+        <ul class="legend-list">
+          <li><span class="swatch" style="background:#49b26c"></span>Router A starts a top-lane transfer.</li>
+          <li><span class="swatch" style="background:#3d94de"></span>Router B transmits through the center node.</li>
+          <li><span class="swatch" style="background:#f0a63c"></span>Router C injects traffic from the lower lane.</li>
+          <li><span class="swatch" style="background:#e66f79"></span>If two devices fire before the first finishes, a collision occurs.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <main class="panel game-wrap">
+      <section class="hud" aria-label="Game scoreboard">
+        <div class="hud-card"><span>Score</span><strong id="score">0</strong></div>
+        <div class="hud-card"><span>Collisions</span><strong id="collisions">0</strong></div>
+        <div class="hud-card"><span>Best streak</span><strong id="streak">0</strong></div>
+        <div class="hud-card"><span>Status</span><strong id="stateLabel">Idle</strong></div>
+      </section>
+
+      <section class="network" id="network" aria-label="Shared network field">
+        <span class="lane-label lane-top">Upper channel</span>
+        <span class="lane-label lane-bottom">Lower channel</span>
+
+        <button class="device a" id="A" type="button" aria-label="Send from device A" onclick="send('A')">
+          <span class="device-letter">A</span>
+          <span class="device-role">Node</span>
+        </button>
+
+        <button class="device b" id="B" type="button" aria-label="Send from device B" onclick="send('B')">
+          <span class="device-letter">B</span>
+          <span class="device-role">Node</span>
+        </button>
+
+        <button class="device c" id="C" type="button" aria-label="Send from device C" onclick="send('C')">
+          <span class="device-letter">C</span>
+          <span class="device-role">Node</span>
+        </button>
+      </section>
+
+      <div class="statusbar">
+        <div class="status-pill" id="liveStatus"><span class="dot"></span><span id="message">Ready for a clean transmission.</span></div>
+        <div class="controls">
+          <button class="btn btn-primary" type="button" onclick="resetGame()">Reset game</button>
+          <button class="btn btn-secondary" type="button" onclick="demoCollision()">Force collision</button>
+        </div>
+      </div>
+
+      <p class="footer-note">Tip: click one device, wait for the packet to finish crossing, then send the next one.</p>
+    </main>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    root.setAttribute('data-theme', theme);
+
+    function syncThemeIcon() {
+      toggle.setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`);
+      toggle.innerHTML = theme === 'dark'
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+    }
+
+    toggle.addEventListener('click', () => {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', theme);
+      syncThemeIcon();
+    });
+    syncThemeIcon();
+
+    const network = document.getElementById('network');
+    const scoreEl = document.getElementById('score');
+    const collisionsEl = document.getElementById('collisions');
+    const streakEl = document.getElementById('streak');
+    const stateLabel = document.getElementById('stateLabel');
+    const messageEl = document.getElementById('message');
+    const liveStatus = document.getElementById('liveStatus');
+
+    let activeDevices = [];
+    let score = 0;
+    let collisions = 0;
+    let streak = 0;
+    let isResolving = false;
+    let successTimer = null;
+    let cleanupTimer = null;
+
+    function setStatus(type, label, message) {
+      liveStatus.classList.remove('warn', 'error');
+      if (type === 'warn') liveStatus.classList.add('warn');
+      if (type === 'error') liveStatus.classList.add('error');
+      stateLabel.textContent = label;
+      messageEl.textContent = message;
+    }
+
+    function updateBoard() {
+      scoreEl.textContent = score;
+      collisionsEl.textContent = collisions;
+      streakEl.textContent = streak;
+    }
+
+    function makePacket(fromId) {
+      const source = document.getElementById(fromId);
+      const packet = document.createElement('span');
+      packet.className = 'packet';
+      const networkRect = network.getBoundingClientRect();
+      const sourceRect = source.getBoundingClientRect();
+      const startX = sourceRect.left - networkRect.left + sourceRect.width / 2 - 8;
+      const startY = sourceRect.top - networkRect.top + sourceRect.height / 2 - 8;
+      packet.style.left = `${startX}px`;
+      packet.style.top = `${startY}px`;
+
+      let distance = networkRect.width * 0.48;
+      if (fromId === 'B') distance = networkRect.width * 0.28;
+      if (fromId === 'C') distance = -(networkRect.width * 0.48);
+      packet.style.setProperty('--travel-distance', distance);
+      network.appendChild(packet);
+      requestAnimationFrame(() => packet.classList.add('animate'));
+      setTimeout(() => packet.remove(), 820);
+    }
+
+    function clearTimers() {
+      clearTimeout(successTimer);
+      clearTimeout(cleanupTimer);
+    }
+
+    function clearDevices() {
+      activeDevices.forEach(id => {
+        document.getElementById(id).classList.remove('active', 'collision');
+      });
+      activeDevices = [];
+      isResolving = false;
+    }
+
+    function handleSuccessfulSend(device) {
+      score += 1;
+      streak += 1;
+      updateBoard();
+      setStatus('ok', 'Clean send', `Device ${device} transmitted successfully.`);
+      cleanupTimer = setTimeout(() => {
+        clearDevices();
+        setStatus('ok', 'Idle', 'Ready for a clean transmission.');
+      }, 180);
+    }
+
+    function handleCollision() {
+      clearTimers();
+      collisions += 1;
+      streak = 0;
+      updateBoard();
+      setStatus('error', 'Collision', 'Two devices transmitted at once. Shared medium conflict detected.');
+      activeDevices.forEach(id => {
+        document.getElementById(id).classList.add('collision');
+      });
+      cleanupTimer = setTimeout(() => {
+        clearDevices();
+        setStatus('warn', 'Recovering', 'Collision cleared. Wait for the channel to stabilize.');
+        setTimeout(() => setStatus('ok', 'Idle', 'Ready for a clean transmission.'), 700);
+      }, 950);
+    }
+
+    function send(device) {
+      if (isResolving && !activeDevices.includes(device)) return;
+      const el = document.getElementById(device);
+
+      if (!activeDevices.includes(device)) {
+        activeDevices.push(device);
+        el.classList.add('active');
+        makePacket(device);
+      }
+
+      if (activeDevices.length > 1) {
+        isResolving = true;
+        handleCollision();
+      } else {
+        clearTimers();
+        isResolving = true;
+        setStatus('warn', 'Transmitting', `Device ${device} is using the network channel.`);
+        successTimer = setTimeout(() => handleSuccessfulSend(device), 780);
+      }
+    }
+
+    function resetGame() {
+      clearTimers();
+      score = 0;
+      collisions = 0;
+      streak = 0;
+      updateBoard();
+      clearDevices();
+      document.querySelectorAll('.packet').forEach(packet => packet.remove());
+      setStatus('ok', 'Idle', 'Ready for a clean transmission.');
+    }
+
+    function demoCollision() {
+      resetGame();
+      send('A');
+      setTimeout(() => send('C'), 150);
+    }
+
+    updateBoard();
+    setStatus('ok', 'Idle', 'Ready for a clean transmission.');
+  </script>
+</body>
+</html>
